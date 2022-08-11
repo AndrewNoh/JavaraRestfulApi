@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mybatis.mapper.users">
+
+	<select id="UsersLogin" parameterType="UserDTO" resultType="int">
+		SELECT COUNT(*) FROM members WHERE email=#{email} AND
+		password=#{password}
+	</select>
+	<select id="userInfo" parameterType="Map" resultType="UserDTO">
+		SELECT m.*,a.* FROM members m JOIN
+		ADDRESS_LIST a ON m.userno=a.userno WHERE
+		<if test="email != null">email=#{email}</if>
+		<if test="userno != null"> a.userno=#{userno}</if>
+	</select>
+
+	<update id="updateAddr" parameterType="Map">
+		UPDATE ADDRESS_LIST SET
+		simpleaddress=#{simpleAddr},fulladdress=#{nowAddress} WHERE
+		userno=#{userno}
+	</update>
+	
+	
+   <!-- 페이 서비스: 계좌 생성-->
+   <insert id="payCreateAmount" parameterType="Map">
+   		INSERT INTO ZABARAPAY VALUES(SEQ_ZABARAPAY_PAYNO.NEXTVAL, #{userno})
+   </insert>
+   
+   <!-- 페이 서비스: 생성된 계좌번호 조회  -->
+   <select id="payLogNo" parameterType="Map" resultType="int">
+   		SELECT PAYNO FROM ZABARAPAY WHERE userno = #{userno}
+   </select>
+   
+   <!-- 페이 서비스: 로그 생성 -->
+   <insert id="payLog" parameterType="Map">
+   		INSERT INTO PAYLOG VALUES(SEQ_PAYLOG_LOGNO.NEXTVAL, #{payno}, NULL, NULL, 0)
+   </insert>
+
+   <!-- 페이 서비스: 입금 -->
+   <insert id="payDeposit" parameterType="Map">
+   		INSERT INTO PAYLOG VALUES(SEQ_PAYLOG_LOGNO.NEXTVAL, #{payno}, #{deposit}, NULL, #{balance})
+   </insert>
+     
+   <!-- 페이 서비스: 출금 -->
+   <insert id="payWithdraw" parameterType="Map">
+   		INSERT INTO PAYLOG VALUES(SEQ_PAYLOG_LOGNO.NEXTVAL, #{payno}, NULL, #{withdraw}, #{balance})
+   </insert>
+  
+   <!-- 페이 서비스: 잔액 -->
+   <select id="payBalance" parameterType="Map" resultType="PayDTO">
+   		SELECT * FROM (SELECT * FROM PAYLOG WHERE payno=#{payno} ORDER BY logno DESC) WHERE ROWNUM=1
+   </select >
+	
+</mapper>

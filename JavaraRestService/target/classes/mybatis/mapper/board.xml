@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mybatis.mapper.board">
+
+	<select id="getAuctionList" parameterType="Map"
+		resultType="BoardDTO">
+		SELECT * FROM
+		(SELECT ADDRNO, AUCTION_NO, USERNO, TITLE,
+		CONTENT, CATEGORY, LIKES,
+		POSTDATE, ENDDATE, STATUS FROM
+		(SELECT * FROM
+		AUCTION_LIST L WHERE
+		(SELECT SIMPLEADDRESS FROM ADDRESS_LIST A WHERE
+		L.ADDRNO = A.ADDRNO) =
+		#{simpleAddress}
+		ORDER BY AUCTION_NO DESC) D) T
+		INNER JOIN AUCTION_PRICE P ON P.AUCTION_NO = T.AUCTION_NO
+		LEFT OUTER
+		JOIN ADDRESS_LIST A ON A.ADDRNO = T.ADDRNO
+		WHERE T.STATUS = 'SALE'
+		ORDER BY P.AUCTION_NO DESC
+
+	</select>
+	<select id="getAuctionImage" parameterType="Map"
+		resultType="ImageDTO">
+		SELECT * FROM AUCTION_IMG WHERE AUCTION_NO = #{auction_no}
+	</select>
+
+	<select id="getAuctionListOne" parameterType="Map"
+		resultType="BoardDTO">
+		SELECT * FROM MEMBERS M, auction_list L
+		LEFT OUTER JOIN
+		AUCTION_PRICE P ON P.AUCTION_NO = L.AUCTION_NO
+		LEFT OUTER JOIN
+		address_list A ON l.auction_no = A.auction_no
+		WHERE
+		L.AUCTION_NO =
+		#{auction_no} AND m.userno = l.userno
+	</select>
+	
+	<select id="getAuctionListChat" parameterType="Map"
+		resultType="ShowDTO">
+		SELECT AL.AUCTION_NO, AL.TITLE, AP.UPPER_PRICE, I.IMAGENAME FROM
+			(SELECT IMG.* FROM (SELECT ROW_NUMBER() OVER(PARTITION BY AUCTION_NO ORDER BY IMAGENO ASC) AS RNUM, AUCTION_IMG.* FROM AUCTION_IMG ) IMG WHERE RNUM = 1) I
+			LEFT OUTER JOIN AUCTION_LIST AL ON AL.AUCTION_NO = I.AUCTION_NO
+			LEFT OUTER JOIN AUCTION_PRICE AP ON AP.AUCTION_NO = AL.AUCTION_NO
+			WHERE I.AUCTION_NO = #{auction_no}
+	</select>
+
+	<select id="getAuctionTen" parameterType="Map"
+		resultType="TenBoardDTO">
+		<![CDATA[
+			SELECT AL.AUCTION_NO, AL.TITLE, AP.UPPER_PRICE, I.IMAGENAME FROM
+			(SELECT IMG.* FROM (SELECT ROW_NUMBER() OVER(PARTITION BY AUCTION_NO ORDER BY IMAGENO ASC) AS RNUM, AUCTION_IMG.* FROM AUCTION_IMG ) IMG WHERE RNUM = 1) I
+			LEFT OUTER JOIN AUCTION_LIST AL ON AL.AUCTION_NO = I.AUCTION_NO
+			LEFT OUTER JOIN AUCTION_PRICE AP ON AP.AUCTION_NO = AL.AUCTION_NO
+			WHERE USERNO = #{userno} AND AL.STATUS != 'END' AND I.AUCTION_NO != #{auction_no} AND ROWNUM <= 10 ORDER BY AUCTION_NO DESC
+		]]>
+	</select>
+
+	<select id="getRecommendTen" parameterType="Map"
+		resultType="TenBoardDTO">
+		<![CDATA[
+			SELECT * FROM (SELECT AL.AUCTION_NO, AL.TITLE, AP.UPPER_PRICE, I.IMAGENAME FROM
+			(SELECT IMG.* FROM (SELECT ROW_NUMBER() OVER(PARTITION BY AUCTION_NO ORDER BY IMAGENO ASC) AS RNUM, AUCTION_IMG.* FROM AUCTION_IMG ) IMG WHERE RNUM = 1) I
+			LEFT OUTER JOIN AUCTION_LIST AL ON AL.AUCTION_NO = I.AUCTION_NO
+			LEFT OUTER JOIN AUCTION_PRICE AP ON AP.AUCTION_NO = AL.AUCTION_NO
+			WHERE CATEGORY=#{category} AND AL.STATUS != 'END' AND I.AUCTION_NO != #{auction_no} ORDER BY DBMS_RANDOM.RANDOM DESC) WHERE ROWNUM <= 10
+		]]>
+	</select>
+
+	<select id="isLike" parameterType="Map" resultType="int">
+		SELECT
+		COUNT(*) FROM
+		AUCTION_LIKE WHERE AUCTION_NO = #{auction_no} AND USERNO
+		= #{myno}
+	</select>
+
+	<insert id="updateLike" parameterType="Map">
+		INSERT INTO
+		AUCTION_LIKE
+		VALUES(#{userno}, #{auction_no})
+	</insert>
+
+
+	<update id="updateAuctionLike" parameterType="map">
+		UPDATE AUCTION_LIST
+		SET LIKES=
+		<if test="isPlus">LIKES+1</if>
+		<if test="!isPlus">LIKES-1</if>
+		WHERE AUCTION_NO=#{auction_no}
+	</update>
+
+
+	<delete id="deleteLike" parameterType="Map">
+		DELETE FROM
+		AUCTION_LIKE
+		WHERE USERNO = #{userno} AND AUCTION_NO = #{auction_no}
+	</delete>
+
+	<update id="updatePrice" parameterType="Map">
+		UPDATE AUCTION_PRICE SET
+		UPPER_PRICE = #{newprice}, UPPER_USER_NO = #{userno} WHERE AUCTION_NO
+		=
+		#{auction_no}
+	</update>
+
+	<update id="updateAuctionStatus" parameterType="map">
+		UPDATE
+		AUCTION_LIST SET STATUS=#{status} WHERE AUCTION_NO=#{auction_no}
+	</update>
+
+	<select id="mypageSelllist" parameterType="Map"
+		resultType="ShowDTO">
+		SELECT list.auction_no, list.title,
+		list.likes,list.status,p.upper_price, img.imagename,
+		addr.simpleaddress,list.postdate
+		FROM
+		(SELECT IMG.* FROM(SELECT
+		ROW_NUMBER() OVER(PARTITION BY AUCTION_NO ORDER BY IMAGENO ASC) AS
+		RNUM,
+		AUCTION_IMG.* FROM AUCTION_IMG ) IMG
+		WHERE RNUM = 1) IMG
+		JOIN
+		auction_list LIST ON
+		img.auction_no=list.auction_no
+		JOIN auction_price P
+		ON
+		list.auction_no=p.auction_no
+		JOIN members MB ON
+		list.userno=mb.userno
+		JOIN address_list addr ON addr.auction_no =
+		list.auction_no
+		WHERE
+		mb.userno= 10 ORDER BY LIST.POSTDATE
+		DESC
+	</select>
+	<select id="mypagepurchaselist" parameterType="Map"
+		resultType="ShowDTO">
+		SELECT L.auction_no, L.title, L.likes, L.status,
+		p.upper_price, img.imagename, addr.simpleaddress, L.postdate FROM
+		AUCTION_LIST L
+		LEFT OUTER JOIN AUCTION_PRICE
+		P ON L.AUCTION_NO =
+		P.AUCTION_NO join
+		(SELECT IMG.* FROM(SELECT ROW_NUMBER() OVER(PARTITION
+		BY AUCTION_NO
+		ORDER BY IMAGENO ASC) AS RNUM, AUCTION_IMG.* FROM
+		AUCTION_IMG ) IMG
+		WHERE RNUM = 1) IMG on
+		L.AUCTION_NO=IMG.AUCTION_NO
+		JOIN address_list addr ON addr.auction_no =
+		l.auction_no
+		WHERE
+		P.UPPER_USER_NO=
+		#{userno} AND L.USERNO != #{userno}
+	</select>
+	<select id="mypagelikelist" parameterType="Map"
+		resultType="ShowDTO">
+		SELECT list.auction_no, list.title, list.likes,
+		list.status,
+		p.upper_price, img.imagename, addr.simpleaddress,
+		list.postdate FROM
+		(SELECT IMG.* FROM(SELECT ROW_NUMBER()
+		OVER(PARTITION BY AUCTION_NO
+		ORDER BY IMAGENO ASC) AS RNUM,
+		AUCTION_IMG.* FROM AUCTION_IMG ) IMG
+		WHERE RNUM = 1) IMG
+		JOIN
+		AUCTION_LIST LIST ON
+		IMG.AUCTION_NO=LIST.AUCTION_NO
+		JOIN auction_price P
+		ON
+		list.auction_no=p.auction_no
+		JOIN address_list addr ON
+		list.auction_no
+		= addr.auction_no
+		JOIN auction_like ALS ON
+		ALS.auction_no =
+		list.auction_no
+		WHERE als.userno = #{userno}
+		ORDER BY
+		LIST.POSTDATE DESC
+	</select>
+	<select id="categoryShow" parameterType="Map"
+		resultType="ShowDTO">
+		SELECT list.auction_no, list.title,
+		list.likes,list.status,p.upper_price, img.imagename,
+		addr.simpleaddress,list.postdate
+		FROM
+		(SELECT IMG.* FROM(SELECT
+		ROW_NUMBER() OVER(PARTITION BY AUCTION_NO ORDER BY IMAGENO ASC) AS
+		RNUM,
+		AUCTION_IMG.* FROM AUCTION_IMG ) IMG
+		WHERE RNUM = 1) IMG
+		JOIN
+		auction_list LIST ON
+		img.auction_no=list.auction_no
+		JOIN auction_price P
+		ON
+		list.auction_no=p.auction_no
+		JOIN members MB ON
+		list.userno=mb.userno
+		JOIN address_list addr ON addr.auction_no =
+		list.auction_no
+		WHERE
+		list.category = #{category} ORDER BY LIST.POSTDATE
+		DESC
+	</select>
+	<select id="searchAuction" parameterType="Map"
+		resultType="ShowDTO">
+		SELECT list.auction_no, list.title,
+		list.likes,list.status,p.upper_price,
+		img.imagename,
+		addr.simpleaddress,list.postdate
+		FROM
+		(SELECT IMG.*
+		FROM(SELECT
+		ROW_NUMBER() OVER(PARTITION BY AUCTION_NO ORDER BY IMAGENO
+		ASC) AS
+		RNUM,
+		AUCTION_IMG.* FROM AUCTION_IMG ) IMG
+		WHERE RNUM = 1) IMG
+		JOIN
+		auction_list LIST ON
+		img.auction_no=list.auction_no
+		JOIN
+		auction_price P
+		ON
+		list.auction_no=p.auction_no
+		JOIN members MB ON
+		list.userno=mb.userno
+		JOIN address_list addr ON addr.auction_no =
+		list.auction_no
+		WHERE
+		<![CDATA[	    
+		list.TITLE LIKE '%'||#{title}||'%'
+		]]>
+		AND list.STATUS = 'SALE'
+		AND addr.simpleaddress = #{simpleAddress}
+	</select>
+
+</mapper>

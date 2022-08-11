@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mybatis.mapper.chat">
+	<select id="chatlist" parameterType="Map" resultType="ChatDTO">
+		SELECT
+		c.*,m.nickname sendusernickname ,mb.nickname writeusernickname,
+		m.profile_img senduserprofileimg, mb.profile_img writeuserprofileimg
+		from CHATROOM c JOIN members m on c.userno = m.userno JOIN members mb
+		on c.writeuserno = mb.userno where (c.userno=#{userno} or
+		c.writeuserno= #{userno}) ORDER BY sendtime DESC
+	</select>
+	<select id="unreadcount" parameterType="Map"
+		resultType="ChatDTO">
+		SELECT room_no,count(case when not(senduserno=#{userno})
+		and
+		unread_count=1 then 1 end) unreadcount FROM CHAT_MESSAGE GROUP BY
+		room_no HAVING COUNT(*) > 1
+	</select>
+	<select id="joinchat" parameterType="Map" resultType="ChatDTO">
+		select
+		rownum, c.*,
+		m.nickname, m.profile_img, m.phonenumber from chat_message
+		c join
+		members
+		M on
+		c.senduserno = m.userno where room_no = #{room_no}
+		ORDER BY
+		sendtime
+		ASC
+	</select>
+	<update id="readmsg">
+		UPDATE CHAT_MESSAGE SET unread_count=0 WHERE
+		room_no=#{room_no} and
+		not(senduserno=#{userno})
+	</update>
+	<update id="updateChatRoomno" parameterType="Map">
+		UPDATE CHATROOM SET
+		chatcontent=#{chatcontent}, sendtime=SYSDATE WHERE
+		room_no = #{room_no}
+	</update>
+
+	<insert id="insertChatMessage" parameterType="Map">
+		INSERT INTO
+		CHAT_MESSAGE
+		VALUES(#{room_no},#{senduserno},#{unread_count},#{chatcontent},systimestamp,null)
+	</insert>
+	<insert id="insertChatimg" parameterType="Map">
+		INSERT INTO
+		CHAT_MESSAGE
+		VALUES(#{room_no},#{senduserno},#{unread_count},'사진',systimestamp,#{img})
+	</insert>
+	<update id="updateChatMsg" parameterType="Map">
+		UPDATE chat_message
+		SET
+		chatcontent = #{chatcontent}
+		WHERE ROWID IN (
+		SELECT rid from (
+		SELECT
+		ROWID rid, rownum rn from chat_message where
+		room_no = #{room_no} ORDER
+		BY
+		sendtime ASC)
+		where rn = #{rownum});
+	</update>
+
+
+
+
+
+
+
+
+
+	<select id="userList" parameterType="Map" resultType="ChatDTO">
+		SELECT
+		nickname,profile_img FROM members where userno=#{userno}
+	</select>
+	<insert id="createChatRoomno" parameterType="Map">
+		INSERT INTO CHATROOM
+		VALUES(SEQ_CHATROOM_ROOM_NO.NEXTVAL,#{auction_no},#{townlist_no},#{writeuserno},#{userno},
+		#{chatcontent},SYSDATE)
+	</insert>
+	<select id="findChatRoom" parameterType="Map"
+		resultType="ChatDTO">
+		SELECT c.*,m.nickname sendusernickname, mb.nickname
+		writeusernickname,
+		m.profile_img senduserprofileimg, mb.profile_img
+		writeuserprofileimg
+		from CHATROOM c JOIN members m on c.writeuserno =
+		m.userno JOIN
+		members mb on c.userno = mb.userno where
+		(c.userno=#{userno} or
+		writeuserno= #{userno}) and
+		auction_no=#{auction_no}
+	</select>
+	<select id="viewChatMessage" parameterType="Map"
+		resultType="ChatDTO">
+		SELECT * from CHAT_MESSAGE C where room_no=#{roomno} ORDER
+		BY
+		sendtime
+	</select>
+
+
+
+	<select id="findnickname" parameterType="Map"
+		resultType="ChatDTO">
+		SELECT m.nickname sendusernickname, mb.nickname
+		writeusernickname from
+		CHATROOM c JOIN members m on c.writeuserno =
+		m.userno JOIN members mb
+		on c.userno = mb.userno where
+		room_no=#{roomno}
+	</select>
+
+
+	<delete id="deleteChatRoom">
+		DELETE FROM CHATROOM WHERE room_no =#{roomno}
+	</delete>
+	<delete id="deleteChatMsg">
+		DELETE FROM CHAT_MESSAGE WHERE room_no =#{roomno}
+	</delete>
+
+</mapper>
