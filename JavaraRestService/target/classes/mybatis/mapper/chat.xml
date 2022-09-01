@@ -63,7 +63,7 @@
 		room_no = #{room_no} ORDER
 		BY
 		sendtime ASC)
-		where rn = #{rownum});
+		where rn = #{rownum})
 	</update>
 
 

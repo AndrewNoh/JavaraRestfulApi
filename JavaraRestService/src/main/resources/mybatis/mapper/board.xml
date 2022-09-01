@@ -134,7 +134,7 @@
 		JOIN address_list addr ON addr.auction_no =
 		list.auction_no
 		WHERE
-		mb.userno= 10 ORDER BY LIST.POSTDATE
+		mb.userno= #{userno} ORDER BY LIST.POSTDATE
 		DESC
 	</select>
 	<select id="mypagepurchaselist" parameterType="Map"

@@ -109,8 +109,7 @@ public class UserController {
 		int depositBalance = Integer.parseInt(balance.getBalance()) - (int) map.get("withdraw");
 		map.put("balance", depositBalance);
 		map.put("payno", balance.getPayno());
-		PayDTO payDTO = userService.payDeposit(map);
-		map.put("payDTO", payDTO);
+		userService.payWithdraw(map);
 		return map;
 	}
 	@CrossOrigin
